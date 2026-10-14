@@ -589,7 +589,6 @@ export function mountUI(app: HTMLElement) {
     'div',
     { class: 'title-bar app-title' },
     titleText,
-    h('div', { class: 'title-bar-controls' }, h('button', { class: 'tb-min', tabindex: '-1' }), h('button', { class: 'tb-max', tabindex: '-1' }), h('button', { class: 'tb-close', tabindex: '-1' })),
   );
   const workspace = h('div', { class: 'workspace' });
   fontBar = buildFontBar();
