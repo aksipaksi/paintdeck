@@ -1,0 +1,20 @@
+{
+  "name": "paintdeck",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "typescript": "5",
+    "vite": "6",
+    "vite-plugin-singlefile": "^2.3.3"
+  },
+  "dependencies": {
+    "fflate": "^0.8.3"
+  }
+}
