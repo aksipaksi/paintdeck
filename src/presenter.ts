@@ -205,6 +205,7 @@ export async function startPresentation(fromIndex: number) {
   });
   listen(root, 'pointerdown', (e: PointerEvent) => {
     pokeCursor();
+    retryFullscreen();
     if (session.annotating && e.button === 0) {
       session.drawing = stagePoint(e);
       root.setPointerCapture(e.pointerId);
@@ -229,9 +230,23 @@ export async function startPresentation(fromIndex: number) {
   listen(root, 'pointerup', () => (session.drawing = null));
 }
 
+/** If the first fullscreen request was refused, any key or click in the presenter is a fresh gesture to retry with. */
+function retryFullscreen() {
+  if (!s || s.wentFullscreen || document.fullscreenElement) return;
+  const session = s;
+  session.root
+    .requestFullscreen({ navigationUI: 'hide' })
+    .then(() => {
+      session.wentFullscreen = true;
+      session.root.classList.remove('in-page');
+    })
+    .catch(() => {});
+}
+
 function onKeyDown(e: KeyboardEvent) {
   if (!s) return;
   e.stopPropagation();
+  if (e.key !== 'Escape') retryFullscreen();
   const k = e.key;
   if (k === 'Escape') {
     e.preventDefault();

@@ -3,7 +3,17 @@ import * as cmd from './commands';
 import { loadDeck, saveNow, scheduleSave } from './db';
 import { createSlide, deck, on, resetDeck } from './deck';
 import { alertDialog, closeContextMenu, dialogOpen } from './dialogs';
-import { commitOrDeselect, deleteSelection, hasFloating, insertImageBlob, pasteInternal, selectAll } from './editor';
+import {
+  clipboardMarker,
+  commitOrDeselect,
+  copySelection,
+  cutSelection,
+  deleteSelection,
+  hasFloating,
+  insertImageBlob,
+  pasteInternal,
+  selectAll,
+} from './editor';
 import { isPresenting, setPresenterExitHook } from './presenter';
 import { closeMenus, menusOpen, mountUI } from './ui';
 
@@ -49,12 +59,9 @@ function onKeyDown(e: KeyboardEvent) {
         cmd.doRedo();
         return;
       case 'c':
-        e.preventDefault();
-        cmd.doCopy();
-        return;
       case 'x':
-        e.preventDefault();
-        cmd.doCut();
+      case 'v':
+        // Handled by the native copy/cut/paste events below, which can write the system clipboard.
         return;
       case 'a':
         e.preventDefault();
@@ -105,10 +112,23 @@ function onKeyDown(e: KeyboardEvent) {
   }
 }
 
+function onCopyOrCut(e: ClipboardEvent, cut: boolean) {
+  if (isPresenting() || dialogOpen() || isTyping(e.target)) return;
+  const ok = cut ? cutSelection() : copySelection();
+  if (!ok) {
+    cmd.showHint('Select an area first (Select tool)');
+    return;
+  }
+  e.preventDefault();
+  e.clipboardData?.setData('text/plain', clipboardMarker());
+}
+
 async function onPaste(e: ClipboardEvent) {
   if (isPresenting() || dialogOpen() || isTyping(e.target)) return;
   const files = Array.from(e.clipboardData?.files ?? []).filter((f) => f.type.startsWith('image/'));
+  const text = e.clipboardData?.getData('text/plain') ?? '';
   e.preventDefault();
+  if (text && text === clipboardMarker() && pasteInternal()) return;
   if (files.length) {
     const f = files[0];
     await insertImageBlob(f).catch((err) => cmd.showHint(`Could not paste image: ${err}`));
@@ -133,6 +153,7 @@ async function boot() {
   deck.fileDirty = false;
 
   mountUI(app);
+  (window as unknown as { __paintdeck: unknown }).__paintdeck = { deck };
 
   on('content', scheduleSave);
   on('slides', scheduleSave);
@@ -142,6 +163,8 @@ async function boot() {
 
   window.addEventListener('keydown', onKeyDown);
   document.addEventListener('paste', (e) => void onPaste(e));
+  document.addEventListener('copy', (e) => onCopyOrCut(e, false));
+  document.addEventListener('cut', (e) => onCopyOrCut(e, true));
   // Last-chance flush; the debounce means at most ~1s of work is at risk anyway.
   window.addEventListener('pagehide', () => void saveNow());
   document.addEventListener('visibilitychange', () => {

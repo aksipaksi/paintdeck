@@ -455,7 +455,6 @@ body.no-sidebar .sidebar {
   top: 0;
   width: 1920px;
   height: 1080px;
-  image-rendering: pixelated;
 }
 .preview-layer,
 .annot-layer {

@@ -279,6 +279,10 @@ export function setColor(which: 'primary' | 'secondary', hex: string) {
   hooks.onColorsChange();
 }
 
+function clamp(v: number, lo: number, hi: number) {
+  return Math.max(lo, Math.min(hi, v));
+}
+
 function hitRect(r: { x: number; y: number; w: number; h: number }, x: number, y: number) {
   return x >= r.x && y >= r.y && x < r.x + r.w && y < r.y + r.h;
 }
@@ -669,8 +673,8 @@ function makeFloat(src: HTMLCanvasElement, cx?: number, cy?: number) {
   const s = Math.min(1, STAGE_W / w, STAGE_H / h);
   w = Math.round(w * s);
   h = Math.round(h * s);
-  const x = cx === undefined ? Math.round((STAGE_W - w) / 2) : Math.round(cx - w / 2);
-  const y = cy === undefined ? Math.round((STAGE_H - h) / 2) : Math.round(cy - h / 2);
+  const x = cx === undefined ? Math.round((STAGE_W - w) / 2) : clamp(Math.round(cx - w / 2), 0, STAGE_W - w);
+  const y = cy === undefined ? Math.round((STAGE_H - h) / 2) : clamp(Math.round(cy - h / 2), 0, STAGE_H - h);
   floating = { src, x, y, w, h, before: snapshot(), liftRect: null };
   marquee = null;
   selectedGif = null;
@@ -742,6 +746,7 @@ function startText(x: number, y: number, w: number) {
     }
   });
   hooks.onSelectionChange();
+  ta.focus();
   requestAnimationFrame(() => ta.focus());
 }
 
@@ -877,15 +882,25 @@ function selectionCanvas(): HTMLCanvasElement | null {
   return null;
 }
 
+let clipMarker = '';
+
+/** Text put on the system clipboard on copy, so paste can tell our own copy from a newer screenshot. */
+export function clipboardMarker() {
+  return clipMarker;
+}
+
 export function copySelection(): boolean {
   const c = selectionCanvas();
   if (!c) return false;
   internalClipboard = c;
+  clipMarker = `paintdeck-selection:${uid()}`;
+  const marker = clipMarker;
   try {
     const blob = new Promise<Blob>((res, rej) => c.toBlob((b) => (b ? res(b) : rej()), 'image/png'));
-    void navigator.clipboard?.write?.([new ClipboardItem({ 'image/png': blob })]).catch(() => {});
+    const text = new Blob([marker], { type: 'text/plain' });
+    void navigator.clipboard?.write?.([new ClipboardItem({ 'image/png': blob, 'text/plain': text })]).catch(() => {});
   } catch {
-    /* system clipboard unavailable (file://); internal clipboard still works */
+    /* async clipboard unavailable; the copy event marker and internal clipboard still work */
   }
   hooks.onHint('Copied selection');
   return true;
@@ -972,7 +987,9 @@ export async function addGif(blob: Blob, at?: [number, number]) {
   const cy = at?.[1] ?? STAGE_H / 2;
   const slide = currentSlide();
   pushGifUndo(slide);
-  const g: GifObj = { id: uid(), blobId, x: Math.round(cx - w / 2), y: Math.round(cy - h / 2), w, h, z: nextGifZ(slide) };
+  const x = clamp(Math.round(cx - w / 2), 0, STAGE_W - w);
+  const y = clamp(Math.round(cy - h / 2), 0, STAGE_H - h);
+  const g: GifObj = { id: uid(), blobId, x, y, w, h, z: nextGifZ(slide) };
   slide.gifs.push(g);
   if (settings.tool !== 'select') setTool('select');
   selectedGif = g.id;
