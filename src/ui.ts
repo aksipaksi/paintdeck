@@ -67,8 +67,8 @@ function menus(): MenuDef[] {
         'sep',
         { label: 'Export Slides as PNGs (zip)', run: () => void cmd.exportAllPngs() },
         'sep',
-        { label: 'Present from Start', key: 'F5', run: () => cmd.present(false) },
-        { label: 'Present from Current Slide', key: 'Shift+F5', run: () => cmd.present(true) },
+        { label: 'Present from Start', key: `F5 or ${MOD}⇧↩`, run: () => cmd.present(false) },
+        { label: 'Present from Current Slide', key: `⇧F5 or ${MOD}↩`, run: () => cmd.present(true) },
       ],
     ],
     [
@@ -137,6 +137,7 @@ function menus(): MenuDef[] {
 }
 
 let openMenu: HTMLElement | null = null;
+let hoverOpenedAt = 0;
 
 function buildMenuBar(): HTMLElement {
   const bar = h('div', { class: 'menubar' });
@@ -170,11 +171,15 @@ function buildMenuBar(): HTMLElement {
     top.addEventListener('pointerdown', (e) => {
       if (e.target !== top) return;
       e.preventDefault();
-      if (openMenu === top) closeMenus();
+      // A hover just switched to this menu; the click that follows must not toggle it shut.
+      if (openMenu === top && performance.now() - hoverOpenedAt > 400) closeMenus();
       else openThis();
     });
     top.addEventListener('pointerenter', () => {
-      if (openMenu && openMenu !== top) openThis();
+      if (openMenu && openMenu !== top) {
+        openThis();
+        hoverOpenedAt = performance.now();
+      }
     });
     bar.append(top);
   }
@@ -206,7 +211,7 @@ function showShortcuts() {
     ['Save .paintdeck / Open', `${MOD}S / ${MOD}O`],
     ['Duplicate slide', `${MOD}D`],
     ['Previous / next slide', `${MOD}↑ / ${MOD}↓, PageUp / PageDown`],
-    ['Present from start / current', 'F5 / Shift+F5'],
+    ['Present from start / current', `F5 / Shift+F5, or ${MOD}⇧Enter / ${MOD}Enter`],
     ['Shape: square, circle, 45° line', 'hold Shift while dragging'],
     ['Draw with secondary colour', 'right mouse button'],
     ['Copy selection while dragging', `${isMacKey()} + drag`],
@@ -443,7 +448,7 @@ function renderSlideCounter() {
 // ---- sidebar ---------------------------------------------------------------
 
 let list: HTMLElement;
-const thumbs = new Map<string, { item: HTMLElement; canvas: HTMLCanvasElement; gifs: HTMLElement }>();
+const thumbs = new Map<string, { item: HTMLElement; canvas: HTMLCanvasElement; gifs: HTMLElement; slide: Slide }>();
 const pendingThumbs = new Set<Slide>();
 const THUMB_W = 176;
 const THUMB_H = Math.round((THUMB_W * STAGE_H) / STAGE_W);
@@ -480,10 +485,14 @@ function renderSlideList() {
       const gifs = h('div', { class: 'thumb-gifs' });
       const frame = h('div', { class: 'thumb-frame' }, canvas, gifs);
       const item = h('div', { class: 'slide-item', draggable: 'true' }, h('div', { class: 'slide-num' }), frame);
-      t = { item, canvas, gifs };
+      t = { item, canvas, gifs, slide };
       thumbs.set(slide.id, t);
       drawThumb(slide);
-      wireItem(item, slide);
+      wireItem(item, slide.id);
+    } else if (t.slide !== slide) {
+      // Same id but a new Slide object (deck reopened from file): redraw from the new canvas.
+      t.slide = slide;
+      drawThumb(slide);
     }
     t.item.querySelector('.slide-num')!.textContent = String(i + 1);
     t.item.classList.toggle('active', i === deck.current);
@@ -496,11 +505,12 @@ function indexOfItem(item: HTMLElement) {
   return Array.from(list.children).indexOf(item);
 }
 
-function wireItem(item: HTMLElement, slide: Slide) {
-  item.addEventListener('click', () => cmd.goToSlide(deck.slides.indexOf(slide)));
+function wireItem(item: HTMLElement, id: string) {
+  const index = () => deck.slides.findIndex((s) => s.id === id);
+  item.addEventListener('click', () => cmd.goToSlide(index()));
   item.addEventListener('contextmenu', (e) => {
     e.preventDefault();
-    cmd.goToSlide(deck.slides.indexOf(slide));
+    cmd.goToSlide(index());
     showContextMenu(e.clientX, e.clientY, [
       { label: 'New Slide', action: cmd.addSlide },
       { label: 'Duplicate Slide', action: cmd.duplicateCurrent },

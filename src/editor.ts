@@ -3,8 +3,6 @@ import {
   blobUrl,
   cloneGifs,
   currentSlide,
-  deck,
-  emit,
   markChanged,
   nextGifZ,
   on,
@@ -40,7 +38,7 @@ export const settings = {
   eraserSize: 16,
   lineWidth: 3,
   fillMode: 'outline' as FillMode,
-  airSize: 24,
+  airSize: 32,
   font: 'Arial',
   fontSize: 64,
   bold: false,
@@ -439,7 +437,7 @@ function spray(d: Extract<Drag, { kind: 'stroke' }>) {
   const ctx = currentSlide().ctx;
   ctx.fillStyle = d.color;
   const r = settings.airSize / 2;
-  const n = Math.max(10, Math.round(r * 1.2));
+  const n = Math.max(12, Math.round(r * 2));
   for (let i = 0; i < n; i++) {
     const a = Math.random() * Math.PI * 2;
     const rr = Math.sqrt(Math.random()) * r;
@@ -1056,10 +1054,6 @@ export function stampGif() {
   syncGifs();
 }
 
-export function getGifElement(id: string) {
-  return gifEls.get(id);
-}
-
 // ---- drag and drop -------------------------------------------------------
 
 function setupDrop(ws: HTMLElement) {
@@ -1101,12 +1095,4 @@ function setupDrop(ws: HTMLElement) {
       hooks.onHint('That site blocked the download. Save the GIF to disk and drop the file instead.');
     }
   });
-}
-
-export function emitGifs() {
-  emit('gifs', currentSlide());
-}
-
-export function deckHasSlides() {
-  return deck.slides.length > 0;
 }

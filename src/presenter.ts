@@ -26,14 +26,9 @@ interface Session {
 }
 
 let s: Session | null = null;
-let onExit: () => void = () => {};
 
 export function isPresenting() {
   return !!s;
-}
-
-export function setPresenterExitHook(fn: () => void) {
-  onExit = fn;
 }
 
 function fit() {
@@ -314,5 +309,4 @@ export function stopPresentation() {
   session.root.remove();
   deck.current = session.index;
   emit('current');
-  onExit();
 }

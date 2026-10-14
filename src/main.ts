@@ -14,7 +14,7 @@ import {
   pasteInternal,
   selectAll,
 } from './editor';
-import { isPresenting, setPresenterExitHook } from './presenter';
+import { isPresenting } from './presenter';
 import { closeMenus, menusOpen, mountUI } from './ui';
 
 function isTyping(t: EventTarget | null) {
@@ -32,6 +32,13 @@ function onKeyDown(e: KeyboardEvent) {
     e.preventDefault();
     (document.activeElement as HTMLElement | null)?.blur?.();
     cmd.present(e.shiftKey);
+    return;
+  }
+  // Mac keyboards often send F5 to dictation/backlight, so mirror Keynote: ⌘Enter / ⌘⇧Enter.
+  if (mod && k === 'Enter') {
+    e.preventDefault();
+    (document.activeElement as HTMLElement | null)?.blur?.();
+    cmd.present(!e.shiftKey);
     return;
   }
   if (mod && k.toLowerCase() === 's') {
@@ -173,7 +180,6 @@ async function boot() {
   // Dropping a file anywhere outside the canvas must not navigate away from the app.
   window.addEventListener('dragover', (e) => e.preventDefault());
   window.addEventListener('drop', (e) => e.preventDefault());
-  setPresenterExitHook(() => {});
 
   if (restored) cmd.showHint(`Restored your deck (${deck.slides.length} slide${deck.slides.length === 1 ? '' : 's'})`);
   if (!('indexedDB' in window)) void alertDialog('No autosave', 'This browser has no IndexedDB, so autosave is off. Use File → Save often.');

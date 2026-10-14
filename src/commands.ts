@@ -6,7 +6,6 @@ import {
   commitPending,
   copySelection,
   cutSelection,
-  hasInternalClipboard,
   insertImageBlob,
   pasteInternal,
 } from './editor';
@@ -131,17 +130,16 @@ export async function insertGif() {
   for (const f of files) await insertImageBlob(f).catch((e) => showHint(`Could not insert ${f.name}: ${e}`));
 }
 
+function replaceWarning() {
+  return deck.fileDirty
+    ? 'You have changes that are not saved to a .paintdeck file; they will be lost.'
+    : 'The current deck will be replaced (File → Save first if you want a copy).';
+}
+
 export async function newDeck() {
   commitPending();
-  if (deck.fileDirty) {
-    const ok = await confirmDialog(
-      'New deck',
-      'Start a new, empty deck? Changes not saved to a .paintdeck file will be lost.',
-      'Start new',
-      true,
-    );
-    if (!ok) return;
-  }
+  const ok = await confirmDialog('New deck', `Start a new, empty deck? ${replaceWarning()}`, 'Start new', true);
+  if (!ok) return;
   resetDeck([createSlide()], new Map(), 0);
   deck.fileDirty = false;
   void saveNow();
@@ -161,15 +159,8 @@ export async function openFile() {
   commitPending();
   const [file] = await pickFiles('.paintdeck,.zip,application/zip', false);
   if (!file) return;
-  if (deck.fileDirty) {
-    const ok = await confirmDialog(
-      'Open deck',
-      `Opening "${file.name}" replaces the current deck. Changes not saved to a .paintdeck file will be lost.`,
-      'Open',
-      true,
-    );
-    if (!ok) return;
-  }
+  const ok = await confirmDialog('Open deck', `Opening "${file.name}" replaces the current deck. ${replaceWarning()}`, 'Open', true);
+  if (!ok) return;
   try {
     await openDeckFile(file);
     showHint(`Opened ${file.name}`);
@@ -197,5 +188,3 @@ export function present(fromCurrent: boolean) {
 export function doClearImage() {
   clearImage();
 }
-
-export { hasInternalClipboard };
