@@ -2,6 +2,14 @@
 
 MS Paint (XP), but every slide is its own 1920×1080 canvas, with a fullscreen presenter and animated GIFs that keep moving.
 
+![Paintdeck editor](docs/editor.jpg)
+
+Made for a talk where the slides had to look unmistakably human-made. Draw your slides with the pencil, the spray can and the paint bucket, drop in GIFs, and present fullscreen. The build is a single HTML file that runs offline from a USB stick.
+
+![A slide made in Paintdeck](docs/slide.jpg)
+
+More about it: [lindmarker.se/projects/paintdeck](https://lindmarker.se/projects/paintdeck/)
+
 ## Run
 
 ```sh
